@@ -12,7 +12,7 @@ def get_meaning(word, site, datasrc):
             print("Word not found")
         else:
             print(f"An error occurred: {response.reason}")
-        # exit(255)
+        
         return f"An error occurred: {response.reason}"
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -32,6 +32,63 @@ def main(page):
     page.window_width=500
     page.window_height=500
     page.scroll = "adaptive"
+
+    # establish defaults in English
+    page.session.set("intro", "Your word's definition:\n")
+    page.session.set("datasrc", {"data-src": "hc_dict"})
+    page.session.set("site", "https://www.thefreedictionary.com/")
+    
+    def set_language(e):
+        ''' Toggle language between English and Deutsch '''
+        if lang_icon.data == "EN":
+            set_deutsch()
+        elif lang_icon.data == "DE":
+            set_english()
+            
+            
+    def set_english():
+        ''' Set the language options to English in the page.session values '''
+        page.session.set("intro", f"Your word was {txt_word.value}:\n")
+        page.session.set("datasrc", {"data-src": "hc_dict"})
+        page.session.set("site", "https://www.thefreedictionary.com/")
+        page.session.set("button_txt", "Define")
+        print("Switched to ENGLISH")
+        lang_icon.data = "EN"
+        lang_text.value = "EN"
+        txt_word.label = "What's a word you'd like to learn?"
+        page.title = "Get a Word's Meaning - English"
+        page.update()
+    
+    def set_deutsch():
+        ''' Set the language options to Deutsch in the page.session values '''
+        page.session.set("intro", f"Dein Wort war {txt_word.value}:\n")
+        page.session.set("datasrc", {"data-src": "pons"})
+        page.session.set("site", "https://de.thefreedictionary.com/")
+        page.session.set("button_txt", "Definieren")
+        print("Switched to DEUTSCH")
+        lang_icon.data = "DE"
+        lang_text.value = "DE"
+        txt_word.label = "Welches Wort möchtest du lernen?"
+        page.title = "Verstehe die Bedeutung eines Wortes - Deutsch"
+        page.update()
+    
+    lang_text = ft.Text("LANG")
+    lang_icon = ft.FloatingActionButton(
+        content=ft.Row(
+            [ft.Icon(ft.icons.LANGUAGE_OUTLINED), ft.Text("")], alignment="center", spacing=5
+        ),
+        tooltip="EN/DE",
+        text="EN/DE",
+        bgcolor=ft.colors.BLACK54,
+        shape=ft.RoundedRectangleBorder(radius=15),
+        width=60,
+        mini=True,
+        data="EN",
+        on_click=set_language
+    )
+    
+    page.add(lang_icon)
+    page.update()
     
     # When the button is clicked, we display the results of the lookup.
     def btn_click(e):
@@ -47,18 +104,22 @@ def main(page):
             page.update()
             # get the entry
             word = txt_word.value
-            intro = f"Your word was {word}:\n"
-            datasrc = {"data-src": "hc_dict"}
-            site = "https://www.thefreedictionary.com/"
+            # get the current language settings
+            intro = page.session.get("intro")
+            datasrc = page.session.get("datasrc")
+            site = page.session.get("site")
+            # get the definition in response
             response = get_meaning(word, site, datasrc)
-            # Reset the response output view
+            # clear and repopulate the response output view
             response_list.clean()
             response_list.value = f"{intro}{response}"
+            # end the progress bar
             page.splash = None
+            
             page.update()
 
     # Inputs View
-    txt_word = ft.TextField(label="What's a word you'd like to learn?",on_submit=btn_click)
+    txt_word = ft.TextField(label="What's a word you'd like to learn?",on_submit=btn_click, width=350)
     btn = ft.ElevatedButton("Define", on_click=btn_click)
     input_controls = ft.Column(controls=[
         ft.Row(controls=[txt_word, btn] ,
